@@ -312,17 +312,31 @@ static int mirisdr_async_alloc (mirisdr_dev_t *p) {
     }
 
     if (!p->xfer_buf) {
+        size_t j, bufsz;
+
         p->xfer_buf = malloc(p->xfer_buf_num * sizeof(*p->xfer_buf));
 
+        switch (p->transfer) {
+        case MIRISDR_TRANSFER_ISOC:
+            bufsz = (size_t) DEFAULT_ISO_BUFFER * DEFAULT_ISO_BUFFERS * DEFAULT_ISO_PACKETS;
+            break;
+        default:
+            bufsz = DEFAULT_BULK_BUFFER;
+            break;
+        }
+        p->xfer_buf_size = bufsz;
+
+        /* Prefer usbfs DMA-coherent buffers: saves ~5% CPU on N150 */
+        p->xfer_buf_devmem = 1;
         for (i = 0; i < p->xfer_buf_num; i++) {
-            switch (p->transfer) {
-            case MIRISDR_TRANSFER_BULK:
-                p->xfer_buf[i] = malloc(DEFAULT_BULK_BUFFER);
-                break;
-            case MIRISDR_TRANSFER_ISOC:
-                p->xfer_buf[i] = malloc(DEFAULT_ISO_BUFFER * DEFAULT_ISO_BUFFERS * DEFAULT_ISO_PACKETS);
-                break;
-            }
+            p->xfer_buf[i] = libusb_dev_mem_alloc(p->dh, bufsz);
+            if (!p->xfer_buf[i]) { p->xfer_buf_devmem = 0; break; }
+        }
+        if (!p->xfer_buf_devmem) {
+            for (j = 0; j < i; j++)
+                libusb_dev_mem_free(p->dh, p->xfer_buf[j], bufsz);
+            for (i = 0; i < p->xfer_buf_num; i++)
+                p->xfer_buf[i] = malloc(bufsz);
         }
     }
 
@@ -349,7 +363,11 @@ static int mirisdr_async_free (mirisdr_dev_t *p) {
 
     if (p->xfer_buf) {
         for (i = 0; i < p->xfer_buf_num; i++) {
-            if (p->xfer_buf[i]) free(p->xfer_buf[i]);
+            if (!p->xfer_buf[i]) continue;
+            if (p->xfer_buf_devmem)
+                libusb_dev_mem_free(p->dh, p->xfer_buf[i], p->xfer_buf_size);
+            else
+                free(p->xfer_buf[i]);
         }
 
         free(p->xfer_buf);

@@ -93,6 +93,8 @@ struct mirisdr_dev {
     size_t              xfer_buf_num;
     struct libusb_transfer **xfer;
     unsigned char       **xfer_buf;
+    int                 xfer_buf_devmem;
+    size_t              xfer_buf_size;
     size_t              xfer_out_len;
     size_t              xfer_out_pos;
     unsigned char       *xfer_out;
