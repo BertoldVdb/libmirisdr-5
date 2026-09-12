@@ -179,6 +179,47 @@ MIRISDR_API int mirisdr_get_baseband_gain (mirisdr_dev_t *p);           /* extra
 MIRISDR_API int mirisdr_set_bias (mirisdr_dev_t *p, int bias);          /* extra */
 MIRISDR_API int mirisdr_get_bias (mirisdr_dev_t *p);                    /* extra */
 
+/* GPIO control */
+#define MIRISDR_GPIO_COUNT      4
+
+MIRISDR_API int mirisdr_set_gpio_direction (mirisdr_dev_t *p, unsigned int pin, int output); /* extra */
+MIRISDR_API int mirisdr_get_gpio_direction (mirisdr_dev_t *p, unsigned int pin); /* extra */
+MIRISDR_API int mirisdr_set_gpio_output (mirisdr_dev_t *p, unsigned int pin, int high); /* extra */
+MIRISDR_API int mirisdr_get_gpio_output (mirisdr_dev_t *p, unsigned int pin); /* extra */
+MIRISDR_API int mirisdr_get_gpio_input (mirisdr_dev_t *p, unsigned int pin); /* extra */
+MIRISDR_API int mirisdr_release_gpio (mirisdr_dev_t *p, unsigned int pin); /* extra */
+
+/*
+ * The same, a bit per pin. mirisdr_set_gpio_outputs() drives every pin in mask
+ * to the level it has in levels, in one register write, so they move together
+ * and the pins outside mask are left alone. mirisdr_get_gpio_inputs() returns
+ * all four pads in one transfer. Both return -1 on failure, which a nibble
+ * cannot otherwise be.
+ */
+MIRISDR_API int mirisdr_set_gpio_outputs (mirisdr_dev_t *p, unsigned int mask, unsigned int levels); /* extra */
+MIRISDR_API int mirisdr_get_gpio_inputs (mirisdr_dev_t *p); /* extra */
+
+/* The MSI2500 has a remote control receiver on GPIO3, this function allows to configure a
+ * callback that receives IR events. If you want to sample a non-pulse based protocol, 
+ * such as UART, it makes sense to set tick_ns to 1 and use only the level field */
+#define MIRISDR_IR_GPIO         3
+#define MIRISDR_IR_KEEPS_GOING  127
+
+typedef struct mirisdr_ir_pulse
+{
+	uint32_t index;     /* the sample counter for this packet */
+	uint32_t duration;  /* the run's length if it ended here, or its current duration if not (microseconds) */
+	uint8_t  level;     /* high=1 */
+	uint8_t  ended;     /* set when this is the end of the pulse */
+	uint8_t  partial;   /* duration is a floor due to missing packets */
+	uint8_t  ticks;     /* raw count as received from the device (127=ongoing) */
+} mirisdr_ir_pulse_t;
+
+typedef void (*mirisdr_ir_cb_t) (const mirisdr_ir_pulse_t *pulse, void *ctx);
+
+MIRISDR_API int mirisdr_set_ir (mirisdr_dev_t *p, uint32_t tick_ns, mirisdr_ir_cb_t cb, void *ctx); /* extra */
+MIRISDR_API uint32_t mirisdr_get_ir (mirisdr_dev_t *p);                 /* extra */
+
 /*
  * DC Calibration
  *
