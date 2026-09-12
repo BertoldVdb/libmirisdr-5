@@ -188,16 +188,15 @@ MIRISDR_API int mirisdr_set_gpio_output (mirisdr_dev_t *p, unsigned int pin, int
 MIRISDR_API int mirisdr_get_gpio_output (mirisdr_dev_t *p, unsigned int pin); /* extra */
 MIRISDR_API int mirisdr_get_gpio_input (mirisdr_dev_t *p, unsigned int pin); /* extra */
 MIRISDR_API int mirisdr_release_gpio (mirisdr_dev_t *p, unsigned int pin); /* extra */
-
-/*
- * The same, a bit per pin. mirisdr_set_gpio_outputs() drives every pin in mask
- * to the level it has in levels, in one register write, so they move together
- * and the pins outside mask are left alone. mirisdr_get_gpio_inputs() returns
- * all four pads in one transfer. Both return -1 on failure, which a nibble
- * cannot otherwise be.
- */
 MIRISDR_API int mirisdr_set_gpio_outputs (mirisdr_dev_t *p, unsigned int mask, unsigned int levels); /* extra */
 MIRISDR_API int mirisdr_get_gpio_inputs (mirisdr_dev_t *p); /* extra */
+
+/* These functions allow the host to read and write device memory. The remap argument
+ * allows access to certain internal DSP and USB memories, assuming a compatible firmware
+ * is loaded. Using remap is ignored on the standard firmware and can cause data corruption. */
+MIRISDR_API int mirisdr_read_mem (mirisdr_dev_t *p, uint16_t addr, uint8_t *buf, int len, int remap); /* extra */
+MIRISDR_API int mirisdr_write_mem (mirisdr_dev_t *p, uint16_t addr, const uint8_t *buf, int len, int remap); /* extra */
+MIRISDR_API int mirisdr_reboot (mirisdr_dev_t *p, int from_ram); /* extra */
 
 /* The MSI2500 has a remote control receiver on GPIO3, this function allows to configure a
  * callback that receives IR events. If you want to sample a non-pulse based protocol, 
